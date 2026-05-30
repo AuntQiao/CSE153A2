@@ -1,20 +1,123 @@
 # CSE 153/253 Assignment 2
 
-## Team Members
-
 ## Project Overview
 
-### Task 1: Symbolic Unconditioned Generation
+This project completes two symbolic music generation tasks using models trained from
+scratch on the Nottingham folk tune dataset.
 
-### Task 2: Symbolic Conditioned Generation
+### Task 1: Symbolic Unconditioned Melody Generation
 
-## Files
+The model is trained on melody tokens only. At generation time it receives only
+`<START>` and autoregressively samples a new melody.
 
-- `workbook.html` — Project notebook
-- `symbolic_unconditioned.mid` — Task 1 output
-- `symbolic_conditioned.mid` — Task 2 output
-- `video_url.txt` — Presentation video link
+Final output:
+
+- `symbolic_unconditioned.mid`
+
+### Task 2: Symbolic Chord-Conditioned Melody Generation
+
+The model is trained on paired chord tokens and melody tokens. At generation time
+it receives a chord progression and samples melody events aligned with those
+chords.
+
+Final output:
+
+- `symbolic_conditioned.mid`
+
+## Repository Structure
+
+- `data/raw/` - downloaded source data, including Nottingham ABC files.
+- `data/processed/` - tokenized train/validation splits and vocabulary.
+- `notebooks/` - workbook notebook for EDA, modeling discussion, and evaluation.
+- `src/preprocessing/` - dataset download, parsing, tokenization, and splits.
+- `src/models/` - n-gram baseline and GRU model definitions.
+- `src/training/` - PyTorch dataset and training loop.
+- `src/generation/` - GRU sampling and MIDI writing.
+- `src/evaluation/` - generated-token metrics.
+- `outputs/midi/` - generated MIDI files and token traces.
+- `outputs/checkpoints/` - trained model checkpoints.
+- `outputs/metrics/` - training and generation metrics.
+- `figures/` - plots used in the workbook and presentation.
+
+## Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+## Reproducible Pipeline
+
+Download Nottingham:
+
+```bash
+python -m src.preprocessing.download_nottingham
+```
+
+Tokenize into melody-only and chord-conditioned training files:
+
+```bash
+python -m src.preprocessing.tokenize_nottingham \
+  --raw-dir data/raw/nottingham/abc \
+  --output-dir data/processed/nottingham
+```
+
+Train the unconditioned GRU:
+
+```bash
+python -m src.training.train_gru \
+  --train-jsonl data/processed/nottingham/train_unconditioned.jsonl \
+  --val-jsonl data/processed/nottingham/val_unconditioned.jsonl \
+  --output-dir outputs/checkpoints/unconditioned \
+  --epochs 20
+```
+
+Train the chord-conditioned GRU:
+
+```bash
+python -m src.training.train_gru \
+  --train-jsonl data/processed/nottingham/train_conditioned.jsonl \
+  --val-jsonl data/processed/nottingham/val_conditioned.jsonl \
+  --output-dir outputs/checkpoints/conditioned \
+  --epochs 20
+```
+
+Generate the required submission MIDI files:
+
+```bash
+python -m src.generation.sample_gru \
+  --checkpoint outputs/checkpoints/unconditioned/best.pt \
+  --mode unconditioned \
+  --output-midi symbolic_unconditioned.mid
+
+python -m src.generation.sample_gru \
+  --checkpoint outputs/checkpoints/conditioned/best.pt \
+  --mode conditioned \
+  --chords CHORD_C,CHORD_G,CHORD_Am,CHORD_F,CHORD_C,CHORD_G,CHORD_C \
+  --output-midi symbolic_conditioned.mid
+```
+
+Evaluate generated token traces:
+
+```bash
+python -m src.evaluation.metrics \
+  --tokens-json symbolic_unconditioned.tokens.json \
+  --output-json outputs/metrics/unconditioned_generation.json
+
+python -m src.evaluation.metrics \
+  --tokens-json symbolic_conditioned.tokens.json \
+  --output-json outputs/metrics/conditioned_generation.json
+```
+
+Export the workbook:
+
+```bash
+jupyter nbconvert --to html notebooks/workbook.ipynb --output ../workbook.html
+```
 
 ## References
 
-Course materials, research papers, and open-source implementations used in this project are cited within the notebook and presentation.
+- Nottingham Music Database: https://abc.sourceforge.net/NMD/
+- Music21: https://web.mit.edu/music21/
+- PyTorch: https://pytorch.org/
