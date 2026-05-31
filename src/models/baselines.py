@@ -5,6 +5,7 @@ import random
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from src.evaluation.metrics import summarize
 from src.preprocessing.vocab import END_TOKEN, START_TOKEN
 
 
@@ -77,12 +78,48 @@ def main():
     parser.add_argument("--train-jsonl", required=True)
     parser.add_argument("--val-jsonl", required=True)
     parser.add_argument("--n", type=int, default=3)
+    parser.add_argument("--output-json", default=None)
+    parser.add_argument("--sample-json", default=None)
+    parser.add_argument("--sample-midi", default=None)
+    parser.add_argument("--max-tokens", type=int, default=256)
+    parser.add_argument("--temperature", type=float, default=1.0)
+    parser.add_argument("--seed", type=int, default=153)
     args = parser.parse_args()
 
+    random.seed(args.seed)
+    train_sequences = load_sequences(args.train_jsonl)
+    val_sequences = load_sequences(args.val_jsonl)
     model = NGramModel(n=args.n)
-    model.fit(load_sequences(args.train_jsonl))
-    ppl = model.perplexity(load_sequences(args.val_jsonl))
-    print(json.dumps({"n": args.n, "validation_perplexity": ppl}, indent=2))
+    model.fit(train_sequences)
+    sample = model.generate(max_tokens=args.max_tokens, temperature=args.temperature)
+
+    report = {
+        "n": args.n,
+        "num_train_sequences": len(train_sequences),
+        "num_val_sequences": len(val_sequences),
+        "train_perplexity": model.perplexity(train_sequences),
+        "validation_perplexity": model.perplexity(val_sequences),
+        "sample_metrics": summarize(sample),
+    }
+
+    if args.output_json:
+        output_path = Path(args.output_json)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2)
+
+    if args.sample_json:
+        sample_path = Path(args.sample_json)
+        sample_path.parent.mkdir(parents=True, exist_ok=True)
+        with sample_path.open("w", encoding="utf-8") as f:
+            json.dump(sample, f, indent=2)
+
+    if args.sample_midi:
+        from src.generation.midi_writer import tokens_to_midi
+
+        tokens_to_midi(sample, args.sample_midi)
+
+    print(json.dumps(report, indent=2))
 
 
 if __name__ == "__main__":
