@@ -72,6 +72,13 @@ python -m src.analysis.dataset_summary \
   --figures-dir figures
 ```
 
+Create training and baseline comparison plots:
+
+```bash
+python -m src.analysis.training_plots \
+  --figures-dir figures
+```
+
 Train the unconditioned GRU:
 
 ```bash
