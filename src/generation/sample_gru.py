@@ -156,13 +156,16 @@ def main():
     parser.add_argument("--mode", choices=["unconditioned", "conditioned"], required=True)
     parser.add_argument("--output-midi", required=True)
     parser.add_argument("--max-tokens", type=int, default=256)
+    parser.add_argument("--max-tokens-per-chord", type=int, default=24)
     parser.add_argument("--min-note-tokens", type=int, default=32)
     parser.add_argument("--temperature", type=float, default=0.9)
     parser.add_argument("--top-k", type=int, default=12)
     parser.add_argument("--chords", default="CHORD_C,CHORD_G,CHORD_Am,CHORD_F,CHORD_C,CHORD_G,CHORD_C")
     parser.add_argument("--chords-json", default=None)
+    parser.add_argument("--seed", type=int, default=153)
     args = parser.parse_args()
 
+    torch.manual_seed(args.seed)
     vocab = Vocabulary.load(args.vocab)
     model = load_model(args.checkpoint, vocab)
 
@@ -180,6 +183,7 @@ def main():
             model,
             vocab,
             chords=read_chords(args.chords, args.chords_json),
+            max_tokens_per_chord=args.max_tokens_per_chord,
             temperature=args.temperature,
             top_k=args.top_k,
         )

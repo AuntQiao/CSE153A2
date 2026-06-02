@@ -63,6 +63,22 @@ python -m src.preprocessing.tokenize_nottingham \
   --output-dir data/processed/nottingham
 ```
 
+Create exploratory dataset statistics and plots for the workbook:
+
+```bash
+python -m src.analysis.dataset_summary \
+  --processed-dir data/processed/nottingham \
+  --output-json outputs/metrics/dataset_summary.json \
+  --figures-dir figures
+```
+
+Create training and baseline comparison plots:
+
+```bash
+python -m src.analysis.training_plots \
+  --figures-dir figures
+```
+
 Train the unconditioned GRU:
 
 ```bash
@@ -81,6 +97,26 @@ python -m src.training.train_gru \
   --val-jsonl data/processed/nottingham/val_conditioned.jsonl \
   --output-dir outputs/checkpoints/conditioned \
   --epochs 20
+```
+
+Run n-gram baselines for comparison:
+
+```bash
+python -m src.models.baselines \
+  --train-jsonl data/processed/nottingham/train_unconditioned.jsonl \
+  --val-jsonl data/processed/nottingham/val_unconditioned.jsonl \
+  --n 3 \
+  --output-json outputs/metrics/ngram_unconditioned.json \
+  --sample-json outputs/metrics/ngram_unconditioned_sample.tokens.json \
+  --sample-midi outputs/midi/ngram_unconditioned.mid
+
+python -m src.models.baselines \
+  --train-jsonl data/processed/nottingham/train_conditioned.jsonl \
+  --val-jsonl data/processed/nottingham/val_conditioned.jsonl \
+  --n 3 \
+  --output-json outputs/metrics/ngram_conditioned.json \
+  --sample-json outputs/metrics/ngram_conditioned_sample.tokens.json \
+  --sample-midi outputs/midi/ngram_conditioned.mid
 ```
 
 Generate the required submission MIDI files:
@@ -103,11 +139,18 @@ Evaluate generated token traces:
 ```bash
 python -m src.evaluation.metrics \
   --tokens-json symbolic_unconditioned.tokens.json \
+  --reference-jsonl data/processed/nottingham/val_unconditioned.jsonl \
   --output-json outputs/metrics/unconditioned_generation.json
 
 python -m src.evaluation.metrics \
   --tokens-json symbolic_conditioned.tokens.json \
+  --reference-jsonl data/processed/nottingham/val_conditioned.jsonl \
   --output-json outputs/metrics/conditioned_generation.json
+
+python -m src.evaluation.training_summary \
+  --baseline-json outputs/metrics/ngram_unconditioned.json \
+  --baseline-json outputs/metrics/ngram_conditioned.json \
+  --output-json outputs/metrics/training_summary.json
 ```
 
 Export the workbook:
